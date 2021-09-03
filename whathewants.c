@@ -34,33 +34,10 @@ struct ieee_header {
     u_int16_t fragment;
 };
 
-struct ip_header {
-    #if BYTE_ORDER == LITTLE_ENDIAN
-	u_int8_t	ip_hl:4,		    /* header length */
-		        ip_v:4;			    /* version */
-    #endif
-    #if BYTE_ORDER == BIG_ENDIAN
-	u_int8_t    ip_v:4,			    /* version */
-		        ip_hl:4;		    /* header length */
-    #endif
-    u_int8_t    tos;
-    u_int16_t   data_len;
-    u_int16_t   id;
-
-    #if BYTE_ORDER == LITTLE_ENDIAN
-    u_int16_t   flags:3,            /* first 3 bits */
-                fragment_offset:13; /* last 13 bits */
-    #endif
-    #if BYTE_ORDER == BIG_ENDIAN
-    u_int16_t   fragment_offset:13, /* first 13 bits */
-                flags:3;            /* last 3 bits */
-    #endif
-    u_int8_t    time_to_live;
-    u_int8_t    protocol;
-    u_int16_t   checksum;
-    u_int8_t    source_addr[4];
-    u_int8_t    dest_addr[4];
-};
+void radioHeader(int fp);
+void IEEEHeaderInfo(int fp);
+void IPHeaderInfo(int fp);
+void packetDataInfo(int fp, int data_len);
 
 void radioHeader(int fp) {
     struct radiotapHeader* header = calloc(22, 1);
@@ -118,33 +95,55 @@ void IPHeaderInfo(int fp) {
     printf("IP: ----- IP Header -----\n");
     printf("\tIP: \n");
     printf("\tIP: Version = %d\n", header->version);
-    printf("\tIP: Header length = %d bytes\n", header->ihl);
+    printf("\tIP: Header length = %d bytes\n", header->ihl * 4);
     printf("\tIP: Total length = %hu\n", ntohs(header->tot_len));
-    printf("\tIP: Flags = %#x\n", ntohs(header->frag_off));
-    printf("\tIP: \n");
-    printf("\tIP: \n");
-    printf("\tIP: \n");
-    printf("\tIP: Fragment offset = %d bytes\n", ntohs(header->frag_off) & 0x1FFF);
+    printf("\tIP: Flags = %#x\n", ntohs(header->frag_off) >> 12);
+    printf("\tIP: \t%d... .... .... .... = Reserved bit: %s\n",
+        ntohs(header->frag_off) >> 15,
+        (ntohs(header->frag_off) >> 15) ? "Set" : "Not set");
+    printf("\tIP: \t.%d.. .... .... .... = Don't fragment: %s\n",
+        (ntohs(header->frag_off) >> 14) & 0x1,
+        ((ntohs(header->frag_off) >> 14) & 0x1) ? "Set" : "Not set");
+    printf("\tIP: \t..%d. .... .... .... = More fragments: %s\n",
+        (ntohs(header->frag_off) >> 13) & 0x1,
+        ((ntohs(header->frag_off) >> 13) & 0x1) ? "Set" : "Not set");
+    printf("\tIP: Fragment offset = %d bytes\n",
+        ntohs(header->frag_off) & 0x1FFF);
     printf("\tIP: Time to live = %d seconds/hop\n", header->ttl);
     printf("\tIP: Protocol = %d (ICMP)\n", header->protocol);
-    printf("\tIP: Header checksum = %x\n", header->check);
+    printf("\tIP: Header checksum = %x\n", ntohs(header->check));
     printf("\tIP: Source address = %s\n", 
         inet_ntoa(*(struct in_addr*)&header->saddr));
     printf("\tIP: Destination address = %s\n",
         inet_ntoa(*(struct in_addr*)&header->daddr));
 
-    /*for (int i = 0;;i++) {
-        printf("%04d ", 10*i);
-        for (int j = 0; j < 16; j++) {
-            printf(" %02x", data[i*j + j]);
-        }
-    }*/
+    int data_len = ntohs(header->tot_len) - header->ihl*4;
+    packetDataInfo(fp, data_len);
 
     free(header);
 }
 
-void packetDataInfo(int fp) {
+void packetDataInfo(int fp, int data_len) {
+    unsigned char* data = calloc(data_len, 1);
+    read(fp, data, data_len);
 
+    printf("ICMP: ----- Packet Data -----\n");
+    for (int i = 0; i < data_len/16; i++) {
+        printf("%04d\t", i*10);
+        for (int j = 0; j < 16 && i*16 + j != data_len; j++) {
+            printf("%02x ", data[i*16 + j]);
+        }
+        for (int j = 0; j < 16 && i*16 +j != data_len; j++) {
+            printf("%c", ((data[i*16 + j] > 0x1f) && (data[i*16 + j] < 0x7f)) ? data[i*16 + j] : '.');
+            if ((i*16 + j + 1) % 8 == 0)
+                printf(" ");
+        }
+
+        
+        printf("\n");
+    }
+
+    free(data);
 }
 
 int main(int argc, char** argv) {
