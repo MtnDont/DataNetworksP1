@@ -1,5 +1,5 @@
 CC = g++
-ARGS = -pthread -g
+ARGS = -pthread -g -lpcap
 
 all: client server
 
@@ -14,6 +14,9 @@ threadProgram:
 
 whathewants:
 	gcc whathewants.c $(ARGS) -o whathewants.o
+
+main:
+	gcc main.c $(ARGS) -o main.o
 
 clean:
 	rm -f *.o
