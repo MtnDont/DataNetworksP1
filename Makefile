@@ -4,10 +4,10 @@ ARGS = -pthread -g -lpcap
 all: client server
 
 client:
-	$(CC) UDPClient.cpp -o UDPClient.o
+	$(CC) client.cpp $(ARGS) -o client.o
 
 server:
-	$(CC) UDPServer.cpp -o UDPServer.o
+	$(CC) server.cpp $(ARGS) -o server.o
 
 threadProgram:
 	gcc threadProgram.c $(ARGS) -o threadProgram.o
@@ -19,4 +19,4 @@ main:
 	gcc main.c $(ARGS) -o main.o
 
 clean:
-	rm -f *.o
+	rm -f *.o $(OUT)

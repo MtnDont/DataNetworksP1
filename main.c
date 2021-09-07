@@ -180,15 +180,15 @@ void packetTests(char* fname_r, FILE* fd_w) {
 }
 
 int main(int argc, char** argv) {
-    int fp_r;
+    FILE* fd_r;
     FILE* fd_w;
     
     if (argc != 3) {
-        printf("Usage: %s [filename]\n", argv[0]);
+        printf("Usage: %s [input file] [output file]\n", argv[0]);
         return 1;
     }
     else if (argc == 3) {
-        if (!(fp_r = open(argv[1], 0)) ) {
+        if (!(fd_r = fopen(argv[1], "r")) ) {
             printf("Unable to open file %s for reading\n", argv[1]);
             return 2;
         }
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
 
     packetTests(argv[1], fd_w);
 
-    close(fp_r);
+    fclose(fd_r);
     fclose(fd_w);
 
     return 0;
