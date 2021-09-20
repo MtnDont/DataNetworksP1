@@ -1,3 +1,10 @@
+/*
+Code written by Camron Bartlow
+for CS 4133 Data Networks
+
+Acts as a server to receive ICMP packets from a client
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,27 +45,48 @@ struct ieee_header {
     u_int16_t fragment;
 };
 
+/*
+* Prints information stored in the Radiotap Header of the received packet
+* Prints info to file if specified, otherwise stdout
+*/
 void radioHeader(struct radiotapHeader* header, FILE* fp = stdout);
+/*
+* Prints information stored in the 802.11 Data Header of the received packet
+* Prints info to file if specified, otherwise stdout
+*/
 void IEEEHeaderInfo(struct ieee_header* header, FILE* fp = stdout);
+/*
+* Prints information stored in the IP Header of the received packet
+* Prints info to file if specified, otherwise stdout
+*/
 void IPHeaderInfo(struct iphdr* header, FILE* fp = stdout);
 void packetDataInfo(u_int8_t* data, int data_len, FILE* fp = stdout);
 
+/*
+* Prints information stored in the Radiotap Header of the received packet
+* Prints info to file if specified, otherwise stdout
+*/
 void radioHeader(struct radiotapHeader* header, FILE* fp) {
-    fprintf(fp, "Radiotop: -----Radiotop Header-----\n");
-    fprintf(fp, "\tRadiotop: \n");
-    fprintf(fp, "\tRadiotop: Header revision = %d\n", header->revision);
-    fprintf(fp, "\tRadiotop: Header pad = %d\n", header->padding);
-    fprintf(fp, "\tRadiotop: Header length = %d\n", header->length);
-    fprintf(fp, "\tRadiotop: Present flags word = %x\n", header->present_flags);
-    fprintf(fp, "\tRadiotop: Mac Timestamp = %ld\n", header->mac_timestamp);
-    fprintf(fp, "\tRadiotop: Flag = %x\n", header->flags);
-    fprintf(fp, "\tRadiotop: Data Rate = %0.1f Mb/s\n", (float) header->data_rate * 0.5);
-    fprintf(fp, "\tRadiotop: Channel frequency = %d\n", header->channel_freq);
-    fprintf(fp, "\tRadiotop: Channel flags = %02x\n", header->channel_flags);
+    fprintf(fp, "Radiotap: -----Radiotap Header-----\n");
+    fprintf(fp, "\tRadiotap: \n");
+    fprintf(fp, "\tRadiotap: Header revision = %d\n", header->revision);
+    fprintf(fp, "\tRadiotap: Header pad = %d\n", header->padding);
+    fprintf(fp, "\tRadiotap: Header length = %d\n", header->length);
+    fprintf(fp, "\tRadiotap: Present flags word = %x\n", header->present_flags);
+    fprintf(fp, "\tRadiotap: Mac Timestamp = %ld\n", header->mac_timestamp);
+    fprintf(fp, "\tRadiotap: Flag = %x\n", header->flags);
+    fprintf(fp, "\tRadiotap: Data Rate = %0.1f Mb/s\n", (float) header->data_rate * 0.5);
+    fprintf(fp, "\tRadiotap: Channel frequency = %d\n", header->channel_freq);
+    fprintf(fp, "\tRadiotap: Channel flags = %02x\n", header->channel_flags);
 
+    // Free the header
     free(header);
 }
 
+/*
+* Prints information stored in the 802.11 Data Header of the received packet
+* Prints info to file if specified, otherwise stdout
+*/
 void IEEEHeaderInfo(struct ieee_header* header, FILE* fp) {
     fprintf(fp, "Header: ----- 802.11 Header -----\n");
     fprintf(fp, "\tHeader: \n");
@@ -70,11 +98,16 @@ void IEEEHeaderInfo(struct ieee_header* header, FILE* fp) {
     fprintf(fp, "\tHeader: Transmitter Address = %02x:%02x:%02x:%02x:%02x:%02x\n",
         header->trans_addr[0], header->trans_addr[1], header->trans_addr[2],
         header->trans_addr[3], header->trans_addr[4], header->trans_addr[5]);
-    fprintf(fp, "\tHeader: Fragment number = %x\n", header->fragment);
+    fprintf(fp, "\tHeader: Fragment number = %hx\n", header->fragment);
 
+    // Free the header
     free(header);
 }
 
+/*
+* Prints information stored in the IP Header of the received packet
+* Prints info to file if specified, otherwise stdout
+*/
 void IPHeaderInfo(struct iphdr* header, FILE* fp) {
     fprintf(fp, "IP: ----- IP Header -----\n");
     fprintf(fp, "\tIP: \n");
@@ -101,20 +134,30 @@ void IPHeaderInfo(struct iphdr* header, FILE* fp) {
     fprintf(fp, "\tIP: Destination address = %s\n",
         inet_ntoa(*(struct in_addr*)&header->daddr));
 
-    //int data_len = ntohs(header->tot_len) - header->ihl*4;
-    //packetDataInfo(fp, data_len);
-    //packetDataInfo(fp, ntohs(header->tot_len) - header->ihl*4);
-
+    // Free the header
     free(header);
 }
 
+/*
+* Prints data information stored in the sent packet
+* Will first print the bytes and their corresponding
+* ASCII representation if they have an alphanumeric
+* representation
+* 
+* Prints info to file if specified, otherwise stdout
+*/
 void packetDataInfo(u_int8_t* data, int data_len, FILE* fp) {
     fprintf(fp, "ICMP: ----- Packet Data -----\n");
     for (int i = 0; i < data_len/16; i++) {
+        // Print hex line
         fprintf(fp, "%04d\t", i*10);
+
+        // Print byte value
         for (int j = 0; j < 16 && i*16 + j != data_len; j++) {
             fprintf(fp, "%02x ", data[i*16 + j]);
         }
+
+        // Print ASCII representation
         for (int j = 0; j < 16 && i*16 +j != data_len; j++) {
             fprintf(fp, "%c", ((data[i*16 + j] > 0x1f) && (data[i*16 + j] < 0x7f)) ? data[i*16 + j] : '.');
             if ((i*16 + j + 1) % 8 == 0)
@@ -124,6 +167,7 @@ void packetDataInfo(u_int8_t* data, int data_len, FILE* fp) {
         fprintf(fp, "\n");
     }
 
+    // Free data stored
     free(data);
 }
 
@@ -180,7 +224,7 @@ int main() {
     client_address_size = sizeof(client);
 
     while (true) {
-        /* Zero out buffer */
+        /* Zero out buffer before next use */
         for (int i = 0; i < BUF_SIZE; i++) {
             buf[i] = 0;
         }
@@ -191,26 +235,14 @@ int main() {
             printf("recvfrom()");
             exit(4);
         }
-        /*
-        * Print the message and the name of the client.
-        * The domain should be the internet domain (AF_INET).
-        * The port is received in network byte order, so we translate it to
-        * host byte order before printing it.
-        * The internet address is received as 32 bits in network byte order
-        * so we use a utility that converts it to a string printed in
-        * dotted decimal format for readability.
-        */
-        /*printf("Received message: %s \nfrom domain %s port %d internet address %s\n",
-            buf,
-            (client.sin_family == AF_INET?"AF_INET":"UNKNOWN"),
-            ntohs(client.sin_port),
-            inet_ntoa(client.sin_addr));*/
-        printf("\nReceived message:\n");
+
+        // Prints Received message bytes from client 
+        /*printf("\nReceived message:\n");
         for (int i = 0; i < sizeof(buf); i++) {
             printf("0x%02x ", buf[i]);
             if ((i+1) % 16 == 0)
                 printf("\n");
-        }
+        }*/
 
         // Create memory space for headers
         struct iphdr* ip_h = new iphdr();
@@ -218,6 +250,8 @@ int main() {
         struct radiotapHeader* radiotap_h = new radiotapHeader();
 
         // Copy header information into header variables
+        // The location to start copying bytes from is
+        // determined by header sizes
         memcpy(radiotap_h,
             buf,
             RADIOTAP_HEADER_SIZE);
@@ -240,17 +274,20 @@ int main() {
             buf + RADIOTAP_HEADER_SIZE + IEEE_HEADER_SIZE + 8 + IPV4_HEADER_SIZE,
             data_len);
 
+        // Print header information for each type and data info
         radioHeader(radiotap_h);
         IEEEHeaderInfo(ieee_h);
         IPHeaderInfo(ip_h);
         packetDataInfo(data_msg, data_len);
 
-        printf("from domain %s port %d internet address %s\n",
+        // Says where the packet is sent from
+        printf("from domain %s port %d internet address %s\n\n",
             (client.sin_family == AF_INET?"AF_INET":"UNKNOWN"),
             ntohs(client.sin_port),
             inet_ntoa(client.sin_addr));
     }
 
+    // Free the buffer used to store each frame
     free(buf);
 
     /*

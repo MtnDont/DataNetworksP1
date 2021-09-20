@@ -1,3 +1,10 @@
+/*
+Code written by Camron Bartlow
+for CS 4133 Data Networks
+
+Acts as a client to receive ICMP packets from a client
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pcap/pcap.h>
@@ -51,20 +58,19 @@ int main(int argc, char** argv) {
     }
     fclose(f);
 
-    char* errbuf = (char*) calloc(PCAP_ERRBUF_SIZE, 1);
+    // PCAP Error buffer
+    char errbuf[PCAP_ERRBUF_SIZE];
+    int returnval;
+    // Open file and parse as PCAP
     pcap_t * pcap_ds = pcap_open_offline(buf, errbuf);
+    // PCAP header
     struct pcap_pkthdr *header;
+    // Data in PCAP frame
     const u_int8_t *data;
 
-    while (pcap_next_ex(pcap_ds, &header, &data) >= 0) {
-        /* Send the message in buf to the server */
-        /*if (sendto(s, buf, (strlen(buf)+1), 0,
-                        (struct sockaddr *)&server, sizeof(server)) < 0)
-        {
-            printf("sendto()");
-            exit(3);
-        }*/
 
+    while ((returnval = pcap_next_ex(pcap_ds, &header, &data)) >= 0) {
+        /* Send the message in buf to the server */
         if (sendto(s, data, (header->len), 0,
                         (struct sockaddr *)&server, sizeof(server)) < 0)
         {
@@ -73,6 +79,10 @@ int main(int argc, char** argv) {
         }
     
     }
+    if (returnval == 0) {
+        printf("%s", errbuf);
+    }
+    printf("%d\n", returnval);
 
     /* Deallocate the socket */
     close(s);
