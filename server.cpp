@@ -115,6 +115,7 @@ void IPHeaderInfo(struct iphdr* header, FILE* fp) {
     fprintf(fp, "\tIP: Header length = %d bytes\n", header->ihl * 4);
     fprintf(fp, "\tIP: Total length = %hu\n", ntohs(header->tot_len));
     fprintf(fp, "\tIP: Flags = %#x\n", ntohs(header->frag_off) >> 12);
+    // Bit shifting used to get specific bits
     fprintf(fp, "\tIP: \t%d... .... .... .... = Reserved bit: %s\n",
         ntohs(header->frag_off) >> 15,
         (ntohs(header->frag_off) >> 15) ? "Set" : "Not set");
@@ -124,6 +125,7 @@ void IPHeaderInfo(struct iphdr* header, FILE* fp) {
     fprintf(fp, "\tIP: \t..%d. .... .... .... = More fragments: %s\n",
         (ntohs(header->frag_off) >> 13) & 0x1,
         ((ntohs(header->frag_off) >> 13) & 0x1) ? "Set" : "Not set");
+    // Get remaining 13 bits and convert to 16 bit variable
     fprintf(fp, "\tIP: Fragment offset = %d bytes\n",
         ntohs(header->frag_off) & 0x1FFF);
     fprintf(fp, "\tIP: Time to live = %d seconds/hop\n", header->ttl);
@@ -258,6 +260,7 @@ int main() {
         memcpy(ieee_h,
             buf + RADIOTAP_HEADER_SIZE,
             IEEE_HEADER_SIZE);
+        // 8 bytes added to skip Logical-Link Control Header
         memcpy(ip_h,
             buf + RADIOTAP_HEADER_SIZE + IEEE_HEADER_SIZE + 8,
             IPV4_HEADER_SIZE);
