@@ -82,7 +82,6 @@ int main(int argc, char** argv) {
     if (returnval == 0) {
         printf("%s", errbuf);
     }
-    printf("%d\n", returnval);
 
     /* Deallocate the socket */
     close(s);

@@ -169,11 +169,27 @@ void packetDataInfo(u_int8_t* data, int data_len, FILE* fp) {
         fprintf(fp, "\n");
     }
 
+    fflush(fp);
+
     // Free data stored
     free(data);
 }
 
-int main() {
+int main(int argc, char** argv) {
+
+    FILE* fp = stdout;
+
+    if (argc == 2) {
+        if ((fp = fopen(argv[1], "w")) == NULL) {
+            printf("Cannot open file %s\n", argv[1]);
+            exit(6);
+        }
+    }
+    else if (argc > 2) {
+        printf("Too many arguments\n");
+        exit(5);
+    }
+
     int s, namelen, client_address_size;
     struct sockaddr_in client, server;
 
@@ -278,10 +294,10 @@ int main() {
             data_len);
 
         // Print header information for each type and data info
-        radioHeader(radiotap_h);
-        IEEEHeaderInfo(ieee_h);
-        IPHeaderInfo(ip_h);
-        packetDataInfo(data_msg, data_len);
+        radioHeader(radiotap_h, fp);
+        IEEEHeaderInfo(ieee_h, fp);
+        IPHeaderInfo(ip_h, fp);
+        packetDataInfo(data_msg, data_len, fp);
 
         // Says where the packet is sent from
         printf("from domain %s port %d internet address %s\n\n",
@@ -292,6 +308,9 @@ int main() {
 
     // Free the buffer used to store each frame
     free(buf);
+
+    // Close file pointer
+    fclose(fp);
 
     /*
     * Deallocate the socket.
