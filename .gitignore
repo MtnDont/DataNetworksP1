@@ -1,4 +1,4 @@
-.vscode/
+**/.vscode/
 sniffex.c
 *.o
 *.txt
